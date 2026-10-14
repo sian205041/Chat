@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>온라인 채팅</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#f4f5f7; --surface:#ffffff; --text:#1c1e21; --muted:#6b7280;
+  --mine:#3b6cf6; --mine-text:#ffffff; --other:#ffffff; --border:#e2e5ea; --accent:#3b6cf6; --danger:#d93025;
+  --dm:#7c3aed;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#15171a; --surface:#1f2226; --text:#eceef1; --muted:#9aa1ab;
+    --mine:#4f7cff; --mine-text:#ffffff; --other:#2a2e33; --border:#33383e; --accent:#6f95ff; --danger:#ff6b60; --dm:#a78bfa;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#15171a; --surface:#1f2226; --text:#eceef1; --muted:#9aa1ab;
+  --mine:#4f7cff; --mine-text:#ffffff; --other:#2a2e33; --border:#33383e; --accent:#6f95ff; --danger:#ff6b60; --dm:#a78bfa;
+}
+*{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  font-size:16px;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;
+  background:var(--surface);border-bottom:1px solid var(--border);flex:0 0 auto}
+header h1{font-size:16px;margin:0;font-weight:700}
+.sub{font-size:12px;color:var(--muted);margin-top:2px}
+.status{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.dot.on{background:#22c55e}
+.dot.err{background:var(--danger)}
+#home{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;padding:0 0 12px;-webkit-overflow-scrolling:touch}
+.hsec{font-size:12px;color:var(--muted);padding:14px 16px 6px}
+.hrow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;background:var(--surface);border:0;border-bottom:1px solid var(--border);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.hrow:active{background:var(--bg)}
+.av{flex:0 0 auto;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;background:var(--dm);color:#fff}
+.av.pubav{background:var(--mine);font-size:20px}
+.hmain{flex:1 1 auto;min-width:0}
+.hname{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hsub{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.hbadge{flex:0 0 auto;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--danger);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+#back{display:none;background:none;border:0;color:var(--accent);font:inherit;font-size:15px;font-weight:600;padding:8px 6px 8px 0;cursor:pointer}
+.hleft{display:flex;align-items:center;gap:6px;min-width:0}
+#banner{display:none;flex:0 0 auto;font-size:12px;padding:6px 14px;background:var(--dm);color:#fff;text-align:center}
+#list{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:12px 12px 8px;display:flex;flex-direction:column;gap:8px;
+  -webkit-overflow-scrolling:touch}
+.empty{margin:auto;color:var(--muted);text-align:center;font-size:14px;line-height:1.6;padding:24px}
+.row{display:flex;flex-direction:column;max-width:82%}
+.row.me{align-self:flex-end;align-items:flex-end}
+.row.other{align-self:flex-start;align-items:flex-start}
+.who{font-size:11px;color:var(--muted);margin:0 6px 2px}
+.line{display:flex;align-items:flex-end;gap:6px}
+.row.me .line{flex-direction:row-reverse}
+.bubble{padding:8px 12px;border-radius:16px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
+  border:1px solid var(--border)}
+.row.me .bubble{background:var(--mine);color:var(--mine-text);border-color:var(--mine);border-bottom-right-radius:4px}
+.row.other .bubble{background:var(--other);border-bottom-left-radius:4px}
+.time{font-size:11px;color:var(--muted);flex:0 0 auto;padding-bottom:2px;white-space:nowrap}
+.daysep{align-self:center;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border);
+  border-radius:999px;padding:3px 10px;margin:8px 0 2px}
+.more{align-self:center;font:inherit;font-size:13px;color:var(--accent);background:var(--surface);border:1px solid var(--border);
+  border-radius:999px;padding:6px 14px}
+#jump{position:absolute;right:16px;bottom:96px;display:none;background:var(--accent);color:#fff;border:0;border-radius:999px;
+  padding:8px 14px;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+footer{flex:0 0 auto;background:var(--surface);border-top:1px solid var(--border);padding:8px 10px}
+.compose{display:flex;gap:8px;align-items:flex-end}
+input,textarea{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{flex:1 1 auto;resize:none;max-height:120px;min-height:42px;line-height:1.35}
+#send{flex:0 0 auto;height:42px;padding:0 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;font-weight:600}
+#send:disabled{opacity:.45}
+#notice{font-size:12px;color:var(--danger);padding:0 4px 6px;display:none}
+#setup{position:fixed;inset:0;z-index:10;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:12px}
+.card h2{margin:0;font-size:20px}
+.card p{margin:0;font-size:14px;color:var(--muted);line-height:1.5}
+.card input{width:100%}
+.card button{height:44px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:16px;font-weight:600}
+.card button:disabled{opacity:.5}
+#nerr{font-size:13px;color:var(--danger);min-height:18px}
+.card .seg{display:flex;gap:6px}
+.card .seg button{flex:1 1 0;height:38px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:14px;font-weight:600}
+.card .seg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card input+input{margin-top:-4px}
+#logout{display:none;background:none;border:0;color:var(--muted);font:inherit;font-size:12px;padding:4px 0 4px 8px;cursor:pointer;text-decoration:underline}
+.status{flex-wrap:nowrap;white-space:nowrap}
+
+.hrow{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:pan-y}
+div.hrow{cursor:default}
+.hrow.sel{background:color-mix(in srgb,var(--accent) 16%,var(--surface))}
+.hrow.dim{opacity:.45}
+.av.roomav{background:#0ea5a4}
+.av.checked{background:var(--accent)}
+.tag{font-size:11px;color:#fff;background:var(--dm);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle;font-weight:600}
+.tag.adm{background:var(--danger)}
+.tag.mute{background:var(--muted)}
+.mini{flex:0 0 auto;font:inherit;font-size:13px;font-weight:600;border-radius:10px;padding:7px 12px;border:1px solid var(--border);background:var(--bg);color:var(--text);cursor:pointer}
+.mini.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mini.dng{background:var(--danger);color:#fff;border-color:var(--danger)}
+.searchwrap{padding:10px 12px 2px;background:var(--bg)}
+.searchwrap input{width:100%;border-radius:999px;padding:9px 14px;font-size:15px}
+#selbar{flex:0 0 auto;display:none;flex-direction:column;gap:6px;background:var(--surface);border-top:1px solid var(--border);padding:8px 10px}
+.selrow{display:flex;gap:6px}
+.sbtn{flex:1 1 0;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.sbtn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sbtn.dng{background:var(--danger);color:#fff;border-color:var(--danger)}
+#toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:86%;background:#222;color:#fff;font-size:14px;padding:10px 16px;border-radius:12px;display:none;z-index:30;text-align:center}
+#modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}
+.sheet{width:100%;max-width:400px;max-height:84%;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.sheet h3{margin:0;font-size:18px}
+.sheet p{margin:0;font-size:14px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.sheet input{width:100%}
+#mbody{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:2px}
+#mbtns{display:flex;gap:8px;flex-wrap:wrap}
+#mbtns .mini{flex:1 1 auto;padding:10px 12px;font-size:14px}
+.mrow{display:flex;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--border)}
+.mrow .mn{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow.pick{cursor:pointer}
+#members{display:none;background:none;border:0;font-size:20px;padding:4px 6px;cursor:pointer}
+#list.adm .bubble{cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <div class="hleft">
+    <button id="back" type="button">‹ 홈</button>
+    <div>
+      <h1 id="title">💬 온라인 채팅</h1>
+      <div class="sub" id="me"></div>
+    </div>
+  </div>
+  <div class="status"><button id="members" type="button" aria-label="멤버">👥</button><span class="dot" id="dot"></span><span id="stat">연결 중…</span><button id="logout" type="button">로그아웃</button></div>
+</header>
+<div id="banner"></div>
+<div id="home">
+  <div id="hpub"></div>
+  <div class="searchwrap"><input id="search" type="search" placeholder="🔍 닉네임 검색" maxlength="12" autocomplete="off"></div>
+  <div id="hbody"><div class="empty">연결 중입니다…</div></div>
+</div>
+<div id="list" style="display:none"></div>
+<button id="jump" type="button">새 메시지 ↓</button>
+<div id="selbar"></div>
+<footer style="display:none">
+  <div id="notice"></div>
+  <div class="compose">
+    <textarea id="msg" rows="1" maxlength="500" placeholder="메시지를 입력하세요"></textarea>
+    <button id="send" type="button" disabled>전송</button>
+  </div>
+</footer>
+<div id="toast"></div>
+<div id="modal"><div class="sheet"><h3 id="mtitle"></h3><p id="mdesc"></p><input id="minput" style="display:none"><div id="mbody"></div><div id="mbtns"></div></div></div>
+
+<div id="setup">
+  <div class="card">
+    <h2>💬 온라인 채팅</h2>
+    <div class="seg"><button id="tabReg" class="on" type="button">처음이에요</button><button id="tabLog" type="button">이미 가입했어요</button></div>
+    <p id="sdesc"></p>
+    <input id="nick" maxlength="12" placeholder="닉네임 (1~12자)" autocomplete="username">
+    <input id="pw" type="password" maxlength="32" placeholder="비밀번호 (4~32자)" autocomplete="current-password">
+    <div id="nerr"></div>
+    <button id="nbtn" type="button">시작하기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var API='https://caxnnymddwxdcdbltvat.supabase.co';
+  var KEY='sb_publishable_Noqo2nyau_cMI6d4VNFV9w_howfYeDQ';
+  var PAGE=200;
+  var $=function(id){return document.getElementById(id)};
+  var listEl=$('list'),msgEl=$('msg'),sendEl=$('send'),dotEl=$('dot'),statEl=$('stat'),
+      jumpEl=$('jump'),noticeEl=$('notice'),homeEl=$('home'),hpubEl=$('hpub'),hbodyEl=$('hbody'),searchEl=$('search'),
+      backEl=$('back'),titleEl=$('title'),footEl=document.querySelector('footer'),bannerEl=$('banner'),meEl=$('me'),
+      logoutEl=$('logout'),membersEl=$('members'),selbarEl=$('selbar'),toastEl=$('toast'),
+      modalEl=$('modal'),mtitleEl=$('mtitle'),mdescEl=$('mdesc'),minputEl=$('minput'),mbodyEl=$('mbody'),mbtnsEl=$('mbtns'),
+      setupEl=$('setup'),nickEl=$('nick'),pwEl=$('pw'),nerrEl=$('nerr'),nbtnEl=$('nbtn'),
+      tabReg=$('tabReg'),tabLog=$('tabLog'),sdescEl=$('sdesc');
+
+  var token='',myId=0,myNick='',isAdmin=false,muted=false;
+  var users=[],usersById={},ukey='',uver=0,friends={},rooms=[],roomInfo=null,pubInfo={last:null,unread:0},dmInfo={};
+  var cur='';                         // '' 홈 / 'pub' / 'u:ID' 개인 / 'r:ID' 팀
+  var msgs=[],more=false,afterId=0,histLoaded=false,convTick=0;
+  var reads={};
+  var inflight=false,timer=null,sending=false,lastSend=0;
+  var stickBottom=true,anchorHeight=0,lastSeenId=0,mode='reg';
+  var sel={},selecting=false,search='',pressing=false,homeSig='',listSig='',toastT=null;
+  var MUTED_TEXT='채팅이 정지된 상태예요. 메시지를 보낼 수 없어요.';
+
+  function lsGet(k){try{return localStorage.getItem(k)||''}catch(e){return ''}}
+  function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+  try{reads=JSON.parse(lsGet('chat_reads')||'{}')||{}}catch(e){reads={}}
+
+  function setStatus(kind,text){dotEl.className='dot'+(kind?' '+kind:'');statEl.textContent=text}
+  function showNotice(t){noticeEl.textContent=t||'';noticeEl.style.display=t?'block':'none'}
+  function toast(t){toastEl.textContent=t;toastEl.style.display='block';clearTimeout(toastT);toastT=setTimeout(function(){toastEl.style.display='none'},2800)}
+  function pad(n){return n<10?'0'+n:''+n}
+  function fmtTime(ts){var d=new Date(ts),h=d.getHours();return (h<12?'오전 ':'오후 ')+(h%12||12)+':'+pad(d.getMinutes())}
+  function fmtDay(ts){var d=new Date(ts);return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일'}
+  function dayKey(ts){var d=new Date(ts);return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate()}
+  function nameOf(id){return usersById[id]?usersById[id].nick:'알 수 없음'}
+  function conv(){
+    if(!cur)return null;
+    if(cur==='pub')return {k:'pub',id:0};
+    var p=cur.split(':');return {k:p[0]==='u'?'dm':'room',id:Number(p[1])};
+  }
+  function readKey(){return cur==='pub'?'pub':cur.replace(':','')}
+  function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+
+  async function rpc(fn,args){
+    var res=await fetch(API+'/rest/v1/rpc/'+fn,{
+      method:'POST',
+      headers:{'apikey':KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(args||{})
+    });
+    if(!res.ok)throw new Error('http '+res.status);
+    return await res.json();
+  }
+  var ERR={
+    bad_body:'메시지는 1~500자로 입력해주세요.',bad_target:'보낼 수 없는 대상이에요.',
+    rate_limited:'너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요.',muted:MUTED_TEXT,
+    no_access:'이 대화에 접근할 수 없어요.',forbidden:'권한이 없어요.',
+    room_full:'팀 채팅은 최대 50명까지예요.',room_limit:'팀 채팅은 최대 20개까지 만들 수 있어요.',
+    bad_name:'팀 이름은 1~20자로, < > 없이 입력해주세요.',too_many:'한 번에 너무 많이 선택했어요.'
+  };
+
+  function nearBottom(){return listEl.scrollHeight-listEl.scrollTop-listEl.clientHeight<80}
+  function scrollBottom(){listEl.scrollTop=listEl.scrollHeight;jumpEl.style.display='none'}
+  listEl.addEventListener('scroll',function(){stickBottom=nearBottom();if(stickBottom)jumpEl.style.display='none'});
+  jumpEl.addEventListener('click',scrollBottom);
+
+  function maxId(arr){var m=0;arr.forEach(function(x){if(x.id>m)m=x.id});return m}
+  function markRead(){
+    if(!cur||document.hidden||!msgs.length)return;
+    var mx=maxId(msgs),k=readKey();
+    if(mx>(reads[k]||0)){reads[k]=mx;lsSet('chat_reads',JSON.stringify(reads))}
+  }
+
+  /* ================= 모달 ================= */
+  var modalInput=null;
+  function closeModal(){modalEl.style.display='none';modalInput=null;minputEl.oninput=null}
+  function modal(o){
+    mtitleEl.textContent=o.title||'';
+    mdescEl.textContent=o.desc||'';mdescEl.style.display=o.desc?'block':'none';
+    if(o.input){
+      minputEl.style.display='block';minputEl.placeholder=o.input.ph||'';minputEl.maxLength=o.input.max||50;minputEl.value='';
+      minputEl.oninput=o.onInput?function(){o.onInput(minputEl.value)}:null;
+    }else{minputEl.style.display='none';minputEl.oninput=null}
+    mbodyEl.replaceChildren();if(o.build)o.build(mbodyEl);
+    mbtnsEl.replaceChildren();
+    (o.buttons||[]).forEach(function(b){
+      var bt=el('button','mini'+(b.cls?' '+b.cls:''),b.label);bt.type='button';
+      bt.addEventListener('click',async function(){
+        var r=b.fn?await b.fn(minputEl.value):null;
+        if(r!=='keep')closeModal();
+      });
+      mbtnsEl.appendChild(bt);
+    });
+    modalEl.style.display='flex';
+    if(o.input)setTimeout(function(){minputEl.focus()},50);
+  }
+  modalEl.addEventListener('click',function(e){if(e.target===modalEl)closeModal()});
+
+  /* ================= 선택 모드 ================= */
+  function selIds(){return Object.keys(sel).map(Number)}
+  function clearSel(){sel={};selecting=false;homeSig='';onData()}
+  function toggleSel(id,start){
+    if(start)selecting=true;
+    if(sel[id])delete sel[id];else sel[id]=1;
+    if(!selIds().length)selecting=false;
+    homeSig='';onData();
+  }
+  function selNames(){
+    var n=selIds().map(nameOf);
+    return n.length>5?n.slice(0,5).join(', ')+' 외 '+(n.length-5)+'명':n.join(', ');
+  }
+  async function doFriendRequest(){
+    var ids=selIds();if(!ids.length)return;
+    try{
+      var r=await rpc('chat_friend_request',{p_token:token,p_ids:ids});
+      if(r.ok)toast(r.n>0?r.n+'명에게 친구 요청을 보냈어요.':'이미 친구이거나 요청 중인 사람들이에요.');
+      else toast(ERR[r.error]||'요청에 실패했어요.');
+    }catch(e){toast('요청에 실패했어요. 인터넷 연결을 확인해주세요.')}
+    clearSel();pollNow();
+  }
+  function createRoomModal(){
+    var ids=selIds();if(!ids.length)return;
+    modal({
+      title:'팀 채팅 만들기',desc:'멤버: '+selNames()+' (나 포함 '+(ids.length+1)+'명)',
+      input:{ph:'팀 이름 (1~20자)',max:20},
+      buttons:[
+        {label:'취소'},
+        {label:'만들기',cls:'pri',fn:async function(v){
+          v=v.trim();if(!v){toast('팀 이름을 입력해주세요.');return 'keep'}
+          try{
+            var r=await rpc('chat_room_create',{p_token:token,p_name:v,p_ids:ids});
+            if(!r.ok){toast(ERR[r.error]||'만들지 못했어요.');return 'keep'}
+            clearSel();closeModal();openConv('r:'+r.id);
+          }catch(e){toast('만들지 못했어요. 인터넷 연결을 확인해주세요.');return 'keep'}
+        }}
+      ]
+    });
+  }
+  function muteModal(){
+    var ids=selIds();if(!ids.length)return;
+    function go(mins,label){return {label:label,cls:mins===0?'':'dng',fn:async function(){
+      try{
+        var r=await rpc('chat_admin_mute',{p_token:token,p_ids:ids,p_minutes:mins});
+        toast(r.ok?(mins===0?r.n+'명의 채팅 정지를 풀었어요.':r.n+'명의 채팅을 정지했어요.'):(ERR[r.error]||'실패했어요.'));
+      }catch(e){toast('실패했어요.')}
+      clearSel();pollNow();
+    }}}
+    modal({title:'채팅 정지',desc:selNames()+' (운영자 계정은 제외돼요)',buttons:[
+      go(10,'10분'),go(60,'1시간'),go(1440,'1일'),go(-1,'영구'),go(0,'정지 해제'),{label:'취소'}
+    ]});
+  }
+  function deleteUsersModal(){
+    var ids=selIds();if(!ids.length)return;
+    modal({title:'유저 삭제',desc:selNames()+' 계정과 이 사람들이 보낸·받은 모든 메시지, 만든 팀 채팅이 영구 삭제돼요. 되돌릴 수 없어요.',buttons:[
+      {label:'취소'},
+      {label:'삭제',cls:'dng',fn:async function(){
+        try{
+          var r=await rpc('chat_admin_delete_users',{p_token:token,p_ids:ids});
+          toast(r.ok?r.n+'명을 삭제했어요.':(ERR[r.error]||'실패했어요.'));
+        }catch(e){toast('실패했어요.')}
+        clearSel();pollNow();
+      }}
+    ]});
+  }
+  function renderSelbar(){
+    if(!(selecting&&!cur)){selbarEl.style.display='none';return}
+    selbarEl.style.display='flex';
+    selbarEl.replaceChildren();
+    var r1=el('div','selrow');
+    var b1=el('button','sbtn','친구 요청');b1.type='button';b1.addEventListener('click',doFriendRequest);
+    var b2=el('button','sbtn pri','팀 채팅 만들기');b2.type='button';b2.addEventListener('click',createRoomModal);
+    r1.appendChild(b1);r1.appendChild(b2);selbarEl.appendChild(r1);
+    if(isAdmin){
+      var r2=el('div','selrow');
+      var m=el('button','sbtn','🔇 채팅정지/해제');m.type='button';m.addEventListener('click',muteModal);
+      var d=el('button','sbtn dng','🗑 유저 삭제');d.type='button';d.addEventListener('click',deleteUsersModal);
+      r2.appendChild(m);r2.appendChild(d);selbarEl.appendChild(r2);
+    }
+  }
+
+  /* ================= 홈 ================= */
+  function plainRow(av,avCls,name,sub,unread,onclick,dim){
+    var b=el('button','hrow'+(dim?' dim':''));b.type='button';
+    b.appendChild(el('div','av'+(avCls?' '+avCls:''),av));
+    var mn=el('div','hmain');mn.appendChild(el('div','hname',name));mn.appendChild(el('div','hsub',sub));b.appendChild(mn);
+    if(unread>0)b.appendChild(el('div','hbadge',unread>99?'99+':String(unread)));
+    b.addEventListener('click',function(){if(!selecting)onclick()});
+    return b;
+  }
+  function userRow(u){
+    var b=el('button','hrow'+(sel[u.id]?' sel':''));b.type='button';
+    b.appendChild(el('div','av'+(sel[u.id]?' checked':''),sel[u.id]?'✓':(Array.from(u.nick)[0]||'?')));
+    var mn=el('div','hmain');
+    var nm=el('div','hname',u.nick);
+    if(u.admin)nm.appendChild(el('span','tag adm','운영자'));
+    if(u.muted&&isAdmin)nm.appendChild(el('span','tag mute','정지'));
+    mn.appendChild(nm);
+    var di=dmInfo[u.id],st=friends[u.id];
+    var sub=di?di.body:(st==='accepted'?'친구':st==='out'?'친구 요청함':'탭해서 개인 대화 · 꾹 눌러 선택');
+    mn.appendChild(el('div','hsub',sub));b.appendChild(mn);
+    if(di&&di.unread>0&&!selecting)b.appendChild(el('div','hbadge',di.unread>99?'99+':String(di.unread)));
+    var t=null,fired=false,sx=0,sy=0;
+    function cancel(){clearTimeout(t)}
+    function up(){cancel();pressing=false;setTimeout(function(){renderHome()},60)}
+    b.addEventListener('pointerdown',function(e){
+      pressing=true;fired=false;sx=e.clientX;sy=e.clientY;clearTimeout(t);
+      t=setTimeout(function(){fired=true;if(navigator.vibrate)try{navigator.vibrate(15)}catch(x){}toggleSel(u.id,true)},500);
+    });
+    b.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>8||Math.abs(e.clientY-sy)>8)cancel()});
+    b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',cancel);
+    b.addEventListener('contextmenu',function(e){e.preventDefault()});
+    b.addEventListener('click',function(){
+      if(fired){fired=false;return}
+      if(selecting)toggleSel(u.id);else openConv('u:'+u.id);
+    });
+    return b;
+  }
+  function reqRow(u){
+    var d=el('div','hrow');
+    d.appendChild(el('div','av',Array.from(u.nick)[0]||'?'));
+    var mn=el('div','hmain');mn.appendChild(el('div','hname',u.nick));mn.appendChild(el('div','hsub','친구 요청을 보냈어요'));d.appendChild(mn);
+    var ok=el('button','mini pri','수락');ok.type='button';
+    var no=el('button','mini','거절');no.type='button';
+    async function respond(acc){
+      try{await rpc('chat_friend_respond',{p_token:token,p_id:u.id,p_accept:acc});toast(acc?u.nick+'님과 친구가 됐어요.':'요청을 거절했어요.')}catch(e){toast('실패했어요.')}
+      pollNow();
+    }
+    ok.addEventListener('click',function(){respond(true)});no.addEventListener('click',function(){respond(false)});
+    d.appendChild(ok);d.appendChild(no);return d;
+  }
+  function roomRow(r){
+    var sub=(r.n+'명')+(r.body?' · '+r.body:'')+(isAdmin&&!r.mine?' · (참여 안 함)':'');
+    return plainRow('👥','roomav',r.name,sub,r.unread||0,function(){openConv('r:'+r.id)},selecting);
+  }
+  function section(text){return el('div','hsec',text)}
+
+  function renderHome(force){
+    if(cur)return;
+    if(pressing&&!force)return;
+    var q=search.trim().toLowerCase();
+    var sig=JSON.stringify([uver,friends,rooms,dmInfo,pubInfo,sel,selecting,q,isAdmin,myId]);
+    if(sig===homeSig&&!force)return;
+    homeSig=sig;
+    // 전체 채팅 (항상 맨 위)
+    var last=pubInfo.last;
+    var pubSub=last?(nameOf(last.sender_id)+': '+last.body):'모두가 함께하는 대화방';
+    hpubEl.replaceChildren(plainRow('💬','pubav','전체 채팅',pubSub,pubInfo.unread||0,function(){openConv('pub')},selecting));
+    var frag=document.createDocumentFragment();
+    var others=users.filter(function(u){return u.id!==myId});
+    if(q){
+      var rs=rooms.filter(function(r){return r.name.toLowerCase().indexOf(q)>=0});
+      if(rs.length){frag.appendChild(section('팀 채팅 ('+rs.length+')'));rs.forEach(function(r){frag.appendChild(roomRow(r))})}
+      var us=others.filter(function(u){return u.nick.toLowerCase().indexOf(q)>=0});
+      frag.appendChild(section('검색 결과 ('+us.length+') · 꾹 눌러서 여러 명 선택'));
+      if(!us.length&&!rs.length)frag.appendChild(el('div','empty','검색 결과가 없어요.'));
+      us.forEach(function(u){frag.appendChild(userRow(u))});
+    }else{
+      var reqs=others.filter(function(u){return friends[u.id]==='in'});
+      if(reqs.length&&!selecting){frag.appendChild(section('받은 친구 요청 ('+reqs.length+')'));reqs.forEach(function(u){frag.appendChild(reqRow(u))})}
+      if(rooms.length){
+        frag.appendChild(section((isAdmin?'모든 팀 채팅':'팀 채팅')+' ('+rooms.length+')'+(isAdmin?' · 관리자':'')));
+        rooms.forEach(function(r){frag.appendChild(roomRow(r))});
+      }
+      var fr=others.filter(function(u){return friends[u.id]==='accepted'});
+      if(fr.length){frag.appendChild(section('친구 ('+fr.length+')'));fr.forEach(function(u){frag.appendChild(userRow(u))})}
+      var rest=others.filter(function(u){return friends[u.id]!=='accepted'&&!(friends[u.id]==='in'&&!selecting)});
+      frag.appendChild(section('가입한 사람 ('+rest.length+') · 꾹 눌러서 여러 명 선택'));
+      if(!rest.length)frag.appendChild(el('div','empty','아직 다른 가입자가 없어요.'));
+      rest.forEach(function(u){frag.appendChild(userRow(u))});
+    }
+    hbodyEl.replaceChildren(frag);
+  }
+  searchEl.addEventListener('input',function(){search=searchEl.value;renderHome()});
+
+  /* ================= 대화 화면 ================= */
+  function render(){
+    var sig=[cur,msgs.length,msgs.length?msgs[msgs.length-1].id:0,histLoaded,more,uver,isAdmin].join('|');
+    if(sig===listSig)return;
+    listSig=sig;
+    var wasBottom=stickBottom;
+    var frag=document.createDocumentFragment();
+    if(more){
+      var mb=el('button','more','이전 메시지 더 보기');mb.type='button';mb.addEventListener('click',loadMore);frag.appendChild(mb);
+    }
+    var c=conv();
+    if(!histLoaded){frag.appendChild(el('div','empty','불러오는 중…'))}
+    else if(!msgs.length){
+      frag.appendChild(el('div','empty',c.k==='pub'?'아직 메시지가 없어요. 첫 메시지를 보내보세요!':c.k==='room'?'팀 채팅이 시작됐어요. 첫 메시지를 보내보세요!':nameOf(c.id)+'님과의 개인 대화를 시작해보세요.'));
+    }
+    var prevDay='';
+    msgs.forEach(function(m){
+      var dk=dayKey(m.ts);
+      if(dk!==prevDay){frag.appendChild(el('div','daysep',fmtDay(m.ts)));prevDay=dk}
+      var mine=m.sender_id===myId;
+      var row=el('div','row '+(mine?'me':'other'));
+      var w=el('div','who',nameOf(m.sender_id));
+      if(usersById[m.sender_id]&&usersById[m.sender_id].admin)w.appendChild(el('span','tag adm','운영자'));
+      row.appendChild(w);
+      var line=el('div','line');
+      var b=el('div','bubble',m.body);
+      if(isAdmin)b.addEventListener('click',function(){adminDeleteMsg(m)});
+      line.appendChild(b);line.appendChild(el('div','time',fmtTime(m.ts)));row.appendChild(line);frag.appendChild(row);
+    });
+    listEl.replaceChildren(frag);
+    var last=msgs.length?msgs[msgs.length-1].id:0;
+    if(anchorHeight){listEl.scrollTop=listEl.scrollHeight-anchorHeight;anchorHeight=0}
+    else if(wasBottom){scrollBottom()}
+    else if(last!==lastSeenId){jumpEl.style.display='block'}
+    lastSeenId=last;
+  }
+  function adminDeleteMsg(m){
+    modal({title:'메시지 삭제',desc:nameOf(m.sender_id)+': '+m.body,buttons:[
+      {label:'취소'},
+      {label:'삭제',cls:'dng',fn:async function(){
+        try{
+          var r=await rpc('chat_admin_delete_msg',{p_token:token,p_msg:m.id});
+          if(r.ok){msgs=msgs.filter(function(x){return x.id!==m.id});listSig='';onData();toast('삭제했어요.')}
+          else toast(ERR[r.error]||'실패했어요.');
+        }catch(e){toast('실패했어요.')}
+      }}
+    ]});
+  }
+
+  function updateChrome(){
+    var inChat=!!cur;
+    homeEl.style.display=inChat?'none':'flex';
+    listEl.style.display=inChat?'flex':'none';
+    footEl.style.display=inChat?'block':'none';
+    listEl.className=isAdmin?'adm':'';
+    meEl.textContent=myNick?('나: '+myNick+(isAdmin?' (운영자)':'')):'';
+    renderSelbar();
+    if(!inChat){
+      bannerEl.style.display='none';jumpEl.style.display='none';membersEl.style.display='none';
+      if(selecting){
+        titleEl.textContent=selIds().length+'명 선택됨';
+        backEl.textContent='✕ 취소';backEl.style.display='block';logoutEl.style.display='none';
+      }else{
+        titleEl.textContent='💬 온라인 채팅';backEl.style.display='none';logoutEl.style.display='inline';
+      }
+      return;
+    }
+    backEl.textContent='‹ 홈';backEl.style.display='block';logoutEl.style.display='none';
+    var c=conv();
+    membersEl.style.display=c.k==='room'?'inline':'none';
+    if(c.k==='pub'){
+      titleEl.textContent='전체 채팅';bannerEl.style.display='none';msgEl.placeholder='전체에게 메시지';
+    }else if(c.k==='room'){
+      var nm=roomInfo&&roomInfo.id===c.id?roomInfo.name:'팀 채팅';
+      var n=roomInfo&&roomInfo.id===c.id?roomInfo.members.length:0;
+      titleEl.textContent=nm+(n?' ('+n+')':'');
+      bannerEl.style.display='block';bannerEl.textContent='👥 팀 채팅 · 멤버만 볼 수 있어요';msgEl.placeholder=nm+'에 메시지';
+    }else{
+      var p=nameOf(c.id);
+      titleEl.textContent=p;bannerEl.style.display='block';
+      bannerEl.textContent='🔒 '+p+'님과의 개인 대화';msgEl.placeholder=p+'님에게 개인 메시지';
+    }
+    if(muted)showNotice(MUTED_TEXT);else if(noticeEl.textContent===MUTED_TEXT)showNotice('');
+    sendEl.disabled=muted||!msgEl.value.trim();
+  }
+  function onData(){
+    updateChrome();
+    if(!cur){renderHome();return}
+    markRead();render();
+  }
+
+  /* ================= 대화 열기/닫기 ================= */
+  function kickOut(text){toast(text||'이 대화에 접근할 수 없어요.');goHome()}
+  async function loadHistory(tick,before){
+    var c=conv();if(!c)return;
+    try{
+      var r=await rpc('chat_history',{p_token:token,p_kind:c.k,p_conv:c.id,p_before:before||null,p_limit:PAGE});
+      if(tick!==convTick)return;
+      if(r.error==='bad_session'){forceLogin();return}
+      if(r.error==='no_access'){kickOut();return}
+      if(!r.ok)throw new Error('bad');
+      var arr=r.msgs||[];
+      if(before){
+        var have={};msgs.forEach(function(m){have[m.id]=1});
+        msgs=arr.filter(function(m){return !have[m.id]}).concat(msgs);
+      }else{msgs=arr;histLoaded=true}
+      more=!!r.more;
+      var mx=maxId(msgs);if(mx>afterId)afterId=mx;
+      listSig='';onData();
+    }catch(e){
+      anchorHeight=0;
+      showNotice('메시지를 불러오지 못했어요. 잠시 후 다시 시도해주세요.');
+      if(!before&&tick===convTick){histLoaded=true;listSig='';onData()}
+    }
+  }
+  function openConv(v){
+    cur=v;convTick++;msgs=[];more=false;afterId=0;histLoaded=false;roomInfo=null;
+    stickBottom=true;lastSeenId=0;anchorHeight=0;listSig='';showNotice('');
+    onData();loadHistory(convTick,null);pollNow();
+  }
+  function goHome(){
+    cur='';convTick++;msgs=[];more=false;afterId=0;histLoaded=false;roomInfo=null;listSig='';
+    msgEl.value='';msgEl.style.height='auto';sendEl.disabled=true;showNotice('');
+    homeSig='';onData();pollNow();
+  }
+  function loadMore(){
+    if(!msgs.length)return;
+    anchorHeight=listEl.scrollHeight;listSig='';
+    loadHistory(convTick,msgs[0].id);
+  }
+  backEl.addEventListener('click',function(){if(!cur&&selecting)clearSel();else goHome()});
+
+  /* ================= 팀 멤버 패널 ================= */
+  function openMembers(){
+    var c=conv();if(!c||c.k!=='room'||!roomInfo||roomInfo.id!==c.id)return;
+    var info=roomInfo,canManage=isAdmin||info.owner_id===myId;
+    var btns=[];
+    if(canManage)btns.push({label:'멤버 추가',cls:'pri',fn:function(){openAddMembers(info);return 'keep'}});
+    if(isAdmin)btns.push({label:'방 삭제',cls:'dng',fn:async function(){
+      if(!confirm('이 팀 채팅과 모든 메시지를 삭제할까요?'))return 'keep';
+      try{var r=await rpc('chat_admin_room_delete',{p_token:token,p_room:info.id});
+        if(r.ok){toast('삭제했어요.');goHome()}else toast(ERR[r.error]||'실패했어요.')}catch(e){toast('실패했어요.')}
+    }});
+    btns.push({label:'닫기'});
+    modal({
+      title:info.name+' · 멤버 '+info.members.length+'명',
+      desc:canManage?'방장만 멤버를 추가할 수 있어요.':'',
+      build:function(box){
+        info.members.forEach(function(id){
+          var r=el('div','mrow');
+          var n=el('div','mn',nameOf(id));
+          if(id===info.owner_id)n.appendChild(el('span','tag','방장'));
+          if(usersById[id]&&usersById[id].admin)n.appendChild(el('span','tag adm','운영자'));
+          r.appendChild(n);
+          if(isAdmin&&id!==info.owner_id){
+            var k=el('button','mini dng','추방');k.type='button';
+            k.addEventListener('click',async function(){
+              try{await rpc('chat_admin_room_kick',{p_token:token,p_room:info.id,p_user:id});toast(nameOf(id)+'님을 추방했어요.');closeModal();pollNow()}catch(e){toast('실패했어요.')}
+            });
+            r.appendChild(k);
+          }
+          box.appendChild(r);
+        });
+      },
+      buttons:btns
+    });
+  }
+  function openAddMembers(info){
+    var pick={},lst=null,q='';
+    function candidates(){
+      var inRoom={};info.members.forEach(function(id){inRoom[id]=1});
+      return users.filter(function(u){return !inRoom[u.id]&&u.id!==myId&&(!q||u.nick.toLowerCase().indexOf(q)>=0)});
+    }
+    function refresh(){
+      if(!lst)return;
+      lst.replaceChildren();
+      var cs=candidates();
+      if(!cs.length)lst.appendChild(el('div','hsub','추가할 수 있는 사람이 없어요.'));
+      cs.forEach(function(u){
+        var r=el('div','mrow pick',null);
+        r.appendChild(el('div','mn',(pick[u.id]?'✅ ':'⬜ ')+u.nick));
+        r.addEventListener('click',function(){if(pick[u.id])delete pick[u.id];else pick[u.id]=1;refresh()});
+        lst.appendChild(r);
+      });
+    }
+    modal({
+      title:'멤버 추가',desc:'추가할 사람을 눌러 선택하세요.',
+      input:{ph:'닉네임 검색',max:12},
+      onInput:function(v){q=v.trim().toLowerCase();refresh()},
+      build:function(box){lst=el('div');box.appendChild(lst);refresh()},
+      buttons:[
+        {label:'취소'},
+        {label:'추가',cls:'pri',fn:async function(){
+          var ids=Object.keys(pick).map(Number);
+          if(!ids.length){toast('추가할 사람을 선택해주세요.');return 'keep'}
+          try{
+            var r=await rpc('chat_room_add',{p_token:token,p_room:info.id,p_ids:ids});
+            if(!r.ok){toast(ERR[r.error]||'실패했어요.');return 'keep'}
+            toast(r.n+'명을 추가했어요.');pollNow();
+          }catch(e){toast('실패했어요.');return 'keep'}
+        }}
+      ]
+    });
+  }
+  membersEl.addEventListener('click',openMembers);
+
+  /* ================= 폴링 ================= */
+  function schedule(){
+    clearTimeout(timer);
+    if(!token)return;
+    timer=setTimeout(poll,document.hidden?10000:(cur?1500:3000));
+  }
+  function pollNow(){clearTimeout(timer);poll()}
+  async function poll(){
+    if(!token||inflight)return;
+    inflight=true;
+    var tick=convTick,c=conv(),after=afterId;
+    try{
+      var r=await rpc('chat_poll',{p_token:token,p_kind:c?c.k:null,p_conv:c?c.id:0,p_after:after,p_reads:reads,p_ukey:ukey});
+      if(r.error==='bad_session'){inflight=false;forceLogin();return}
+      if(r.error==='no_access'){if(c&&tick===convTick)kickOut();return}
+      if(!r.ok)throw new Error('bad');
+      setStatus('on','연결됨');
+      if(r.users){
+        users=r.users;usersById={};users.forEach(function(u){usersById[u.id]=u});uver++;
+      }
+      ukey=r.ukey||ukey;
+      if(r.me){isAdmin=!!r.me.admin;muted=!!r.me.muted}
+      pubInfo=r.pub||{last:null,unread:0};
+      dmInfo={};(r.dms||[]).forEach(function(d){dmInfo[d.peer]={body:d.body,unread:d.unread}});
+      friends={};(r.friends||[]).forEach(function(f){friends[f.id]=f.status});
+      rooms=r.rooms||[];
+      if(c&&tick===convTick){
+        roomInfo=r.room||null;
+        if(histLoaded){(r.msgs||[]).forEach(function(m){if(m.id>afterId){msgs.push(m);afterId=m.id}})}
+      }
+      onData();
+    }catch(e){
+      setStatus('err','연결 오류');
+    }finally{
+      inflight=false;schedule();
+    }
+  }
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&token)pollNow()});
+
+  /* ================= 전송 ================= */
+  async function send(){
+    var c=conv();
+    if(sending||!c||muted)return;
+    var text=msgEl.value.trim();if(!text)return;
+    var now=Date.now();if(now-lastSend<300)return;
+    sending=true;lastSend=now;sendEl.disabled=true;
+    try{
+      var r=await rpc('chat_send',{p_token:token,p_kind:c.k,p_conv:c.id,p_body:text.slice(0,500)});
+      if(r.ok){msgEl.value='';msgEl.style.height='auto';showNotice('');stickBottom=true;pollNow()}
+      else if(r.error==='bad_session'){forceLogin()}
+      else{if(r.error==='muted')muted=true;showNotice(ERR[r.error]||'전송에 실패했어요. 다시 시도해주세요.')}
+    }catch(e){showNotice('전송에 실패했어요. 인터넷 연결을 확인해주세요.')}
+    finally{sending=false;sendEl.disabled=muted||!msgEl.value.trim();msgEl.focus()}
+  }
+  msgEl.addEventListener('input',function(){
+    msgEl.style.height='auto';msgEl.style.height=Math.min(msgEl.scrollHeight,120)+'px';
+    sendEl.disabled=muted||!msgEl.value.trim();
+  });
+  msgEl.addEventListener('keydown',function(ev){
+    if(ev.key==='Enter'&&!ev.shiftKey&&!ev.isComposing){ev.preventDefault();send()}
+  });
+  sendEl.addEventListener('click',send);
+
+  /* ================= 가입 / 로그인 ================= */
+  var AUTH_ERR={
+    bad_nick:'닉네임은 1~12자로, < > 같은 특수문자 없이 입력해주세요.',
+    bad_pin:'비밀번호는 4~32자로 입력해주세요.',
+    nick_taken:'이미 사용 중인 닉네임이에요.',
+    bad_login:'닉네임 또는 비밀번호가 맞지 않아요.',
+    locked:'시도가 너무 많아요. 2분 뒤에 다시 시도해주세요.',
+    full:'가입 인원이 가득 찼어요.'
+  };
+  function setMode(m){
+    mode=m;
+    tabReg.className=m==='reg'?'on':'';tabLog.className=m==='log'?'on':'';
+    sdescEl.textContent=m==='reg'
+      ?'닉네임과 비밀번호를 정해주세요. 닉네임은 한 번 정하면 바꿀 수 없고, 모든 메시지 위에 표시돼요. 비밀번호를 잊으면 복구할 수 없어요.'
+      :'가입할 때 정한 닉네임과 비밀번호를 입력하면 어떤 기기에서든 같은 계정으로 들어와요.';
+    nbtnEl.textContent=m==='reg'?'가입하고 시작하기':'로그인';
+    pwEl.autocomplete=m==='reg'?'new-password':'current-password';
+    nerrEl.textContent='';
+  }
+  tabReg.addEventListener('click',function(){setMode('reg')});
+  tabLog.addEventListener('click',function(){setMode('log')});
+  function showSetup(m){
+    setMode(m||'reg');
+    nickEl.value=lsGet('chat_nick');pwEl.value='';
+    setupEl.style.display='flex';
+    setTimeout(function(){(nickEl.value?pwEl:nickEl).focus()},50);
+  }
+  async function submitAuth(){
+    var n=nickEl.value.trim(),p=pwEl.value;
+    if(!n){nerrEl.textContent='닉네임을 입력해주세요.';return}
+    if(p.length<4){nerrEl.textContent=AUTH_ERR.bad_pin;return}
+    nbtnEl.disabled=true;nerrEl.textContent='확인 중…';
+    try{
+      var r=await rpc(mode==='reg'?'chat_register':'chat_login',{p_nick:n,p_pin:p});
+      if(!r.ok){nerrEl.textContent=AUTH_ERR[r.error]||'실패했어요. 다시 시도해주세요.';nbtnEl.disabled=false;return}
+      token=r.token;myId=r.id;myNick=r.nick;
+      lsSet('chat_token',token);lsSet('chat_nick',myNick);
+      pwEl.value='';setupEl.style.display='none';nbtnEl.disabled=false;nerrEl.textContent='';
+      startApp();
+    }catch(e){
+      nerrEl.textContent='서버에 연결하지 못했어요. 인터넷 연결을 확인해주세요.';nbtnEl.disabled=false;
+    }
+  }
+  nbtnEl.addEventListener('click',submitAuth);
+  pwEl.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&!ev.isComposing){ev.preventDefault();submitAuth()}});
+  nickEl.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&!ev.isComposing){ev.preventDefault();pwEl.focus()}});
+
+  function resetState(){
+    clearTimeout(timer);token='';myId=0;cur='';convTick++;msgs=[];users=[];usersById={};ukey='';uver++;
+    dmInfo={};friends={};rooms=[];roomInfo=null;pubInfo={last:null,unread:0};
+    afterId=0;histLoaded=false;sel={};selecting=false;isAdmin=false;muted=false;homeSig='';listSig='';
+  }
+  function forceLogin(){
+    lsDel('chat_token');resetState();closeModal();updateChrome();
+    hpubEl.replaceChildren();hbodyEl.replaceChildren();setStatus('','로그아웃됨');
+    showSetup('log');
+  }
+  logoutEl.addEventListener('click',function(){
+    if(!confirm('로그아웃 할까요?\n닉네임과 대화는 서버에 그대로 남아 있어요.'))return;
+    forceLogin();
+  });
+
+  function startApp(){
+    cur='';homeSig='';updateChrome();setStatus('','연결 중…');pollNow();
+  }
+  async function init(){
+    token=lsGet('chat_token');
+    if(!token){showSetup('reg');return}
+    try{
+      var r=await rpc('chat_session',{p_token:token});
+      if(r.ok){myId=r.id;myNick=r.nick;isAdmin=!!r.admin;lsSet('chat_nick',myNick);startApp();return}
+      lsDel('chat_token');token='';showSetup('log');
+    }catch(e){
+      setStatus('err','연결 오류');
+      hbodyEl.replaceChildren(el('div','empty','서버에 연결하지 못했어요. 다시 시도하는 중…'));
+      setTimeout(init,3000);
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>
